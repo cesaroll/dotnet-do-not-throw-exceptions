@@ -26,17 +26,6 @@ public class WeatherForecastController : ControllerBase
     {
         var result = await _weatherForecastService.GetForecastAsync();
 
-        return result.Match<IActionResult>(forecast =>
-        {
-            return Ok(forecast);
-        }, exception =>
-        {
-            if (exception is ValidationException validationException)
-            {
-                return BadRequest(validationException.ToProblemDetails());
-            }
-
-            return StatusCode((int)HttpStatusCode.InternalServerError);
-        });
+        return result.ToOk(x => x);
     }
 }
