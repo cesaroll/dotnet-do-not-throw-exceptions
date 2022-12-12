@@ -1,4 +1,4 @@
-namespace DoNotThrowExceptions;
+namespace DoNotThrowExceptions.Models;
 
 public class WeatherForecast
 {

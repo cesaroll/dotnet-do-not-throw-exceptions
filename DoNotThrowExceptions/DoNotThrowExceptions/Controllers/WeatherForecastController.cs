@@ -1,3 +1,9 @@
+using System.ComponentModel.DataAnnotations;
+using System.Net;
+using DoNotThrowExceptions.Models;
+using DoNotThrowExceptions.Services;
+using DoNotThrowExceptions.Validation;
+using LanguageExt.Common;
 using Microsoft.AspNetCore.Mvc;
 
 namespace DoNotThrowExceptions.Controllers;
@@ -6,32 +12,31 @@ namespace DoNotThrowExceptions.Controllers;
 [Route("[controller]")]
 public class WeatherForecastController : ControllerBase
 {
-    private static readonly string[] Summaries = new[]
-    {
-        "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-    };
-
     private readonly ILogger<WeatherForecastController> _logger;
+    private readonly WeatherForecastService _weatherForecastService;
 
-    public WeatherForecastController(ILogger<WeatherForecastController> logger)
+    public WeatherForecastController(ILogger<WeatherForecastController> logger, WeatherForecastService weatherForecastService)
     {
         _logger = logger;
+        _weatherForecastService = weatherForecastService;
     }
 
     [HttpGet(Name = "GetWeatherForecast")]
-    public IEnumerable<WeatherForecast> Get()
+    public async Task<IActionResult> Get()
     {
-        if (Random.Shared.Next(1, 5) < 2)
+        var result = await _weatherForecastService.GetForecastAsync();
+
+        return result.Match<IActionResult>(forecast =>
         {
-            throw new Exception("Ops something happened!");
-        }
-        
-        return Enumerable.Range(1, 5).Select(index => new WeatherForecast
+            return Ok(forecast);
+        }, exception =>
+        {
+            if (exception is ValidationException validationException)
             {
-                Date = DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-                TemperatureC = Random.Shared.Next(-20, 55),
-                Summary = Summaries[Random.Shared.Next(Summaries.Length)]
-            })
-            .ToArray();
+                return BadRequest(validationException.ToProblemDetails());
+            }
+
+            return StatusCode((int)HttpStatusCode.InternalServerError);
+        });
     }
 }
